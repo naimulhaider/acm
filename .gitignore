@@ -28,3 +28,9 @@
 Session.vim
 .netrwhist
 *~
+
+# For Topcoder
+driver.*
+driver
+*.html
+Makefile
