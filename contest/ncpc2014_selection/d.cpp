@@ -1,106 +1,98 @@
-//#include <bits/stdc++.h>
-
-#include <iostream>
-#include <algorithm>
-#include <vector>
-#include <sstream>
-#include <fstream>
-#include <string>
-#include <list>
-#include <map>
-#include <set>
-#include <queue>
-#include <deque>
-#include <numeric>
-#include <stack>
-#include <functional>
-#include <bitset>
-#include <iomanip>
-
-#include <ctime>
-#include <cassert>
-#include <cstdio>
-#include <cmath>
-#include <cstring>
-#include <climits>
-#include <cstring>
-#include <cstdlib>
-
-#define _ ios_base::sync_with_stdio(0);
-#define ms(ar,val) memset(ar,val,sizeof(ar))
-#define all(s) (s).begin(),(s).end()
-#define rp1(i,s,n) for(int i=s;i<n;++i)
-#define rp(i,n) rp1(i,0,n)
-#define abs(x) (((x)< 0) ? (-(x)) : (x))
-#define pb push_back
-#define LL long long
-#define Read(x) freopen(x,"r",stdin)
-#define Write(x) freopen(x,"w",stdout)
-#define st(N,pos) (sts[N]=sts[N] | (1<<pos))
-#define check(N,pos) ((bool)(sts[N] & (1<<pos)))
-#define i_s(num)  static_cast<ostringstream*>( &(ostringstream() << num) )->str();
-#define __lcm(a,b)  ((a*b)/(__gcd(a,b)))
-#define inf INT_MAX
-#define mp(a,b) make_pair(a,b)
-#define pii pair<int,int>
-#define PQ priority_queue
-#define GSORT(x) sort(ALL(x), greater<typeof(*((x).begin()))>())
-#define UNIQUE(v) Sort(v); (v).resize(unique(ALL(v)) - (v).begin())
-#define F first
-#define S second
-#define bits(n) __builtin_popcount(n)
-#define EPS 1e-11
-#define hi 100010
-
-///int month[]={31,28,31,30,31,30,31,31,30,31,30,31}; //month
-
+#include<bits/stdc++.h>
 using namespace std;
 
-const LL md = 1000000007L;
+long long v[100009];
 
-LL ar[hi];
-int main()
+const long long MOD = 1000000007;
+
+
+long long powmod( long long base, long long power ) {
+    if( power == 0 ) return 1L;
+    long long ret = powmod( base, power/2 );
+    ret = ( ret * ret ) % MOD;
+    if( power % 2 ) ret = ( ret * base ) %MOD;
+    return ret ;
+}
+
+long long mod(long long a, long long b) {
+    return ((a%b)+b)%b;
+}
+
+long long extended_euclid(long long a, long long b, long long &x, long long &y)
 {
-     #if defined( rifat_pc )
-        //Write("out.txt");
-        Read("in.txt");
-    #endif
-    LL n,x;
-    int tst,cnt=1;
-    cin>>tst;
-    while(tst--){
-        scanf("%I64d %I64d ",&n,&x);
-        rp(i,n)scanf("%I64d",&ar[i]);
-        LL ans1 = 1;
-        LL ans2 = 1;
-        rp(i,n){
-            ans2*=x;
-            ans2%=md;
-        }
-        rp(i,n){
-            ar[i]=x-ar[i];
-            ans1*=ar[i];
-            ans1%=md;
-        }
-        printf("Case %d: ",cnt++);
-        if(ans1){
-            LL gcd = __gcd(ans1,ans2);
-            ans2/=gcd;
-            ans1/=gcd;
-            if(ans1 == 1  && ans2==1){
+    long long xx = y = 0;
+    long long yy = x = 1;
+    while (b)
+    {
+        long long q = a/b;
+        long long t = b;
+        b = a%b;
+        a = t;
+        t = xx;
+        xx = x-q*xx;
+        x = t;
+        t = yy;
+        yy = y-q*yy;
+        y = t;
+    }
+    return a;
+}
 
+long long mod_inverse(long long a, long long n)
+{
+    long long x, y;
+    long long d = extended_euclid(a, n, x, y);
+    if (d > 1) return -1;
+    return mod(x,n);
+}
+
+int main () {
+
+//    freopen( "in.txt", "r", stdin );
+
+    int T;
+    scanf("%d", &T);
+    int kase = 1;
+
+    while( T-- ) {
+
+        int n , x;
+        scanf( "%d %d", &n, &x );
+
+        for( int i =0 ; i< n; i++ ) {
+            scanf( "%lld", &v[i] );
+        }
+
+        long long num = 1, den = 1;
+        for ( int i=0; i<n; i++ ) {
+            num *= ( x - v[i] );
+            num %= MOD;
+        }
+
+        den = powmod ( x , n );
+        den = mod_inverse( den, MOD );
+        long long gcd = __gcd ( num , den );
+        den = mod_inverse( den, MOD );
+//        num /= gcd;
+//        den /= gcd;
+
+        printf("Case %d: ",kase++);
+        if(num){
+            num /= gcd;
+            den /= gcd;
+            long long gcd2 = __gcd( num, den );
+            num /= gcd2;
+            den /= gcd2;
+            if(num == 1 && den==1){
                 printf("1\n");
-            }else printf("%I64d/%I64d\n",ans1,ans2);
+            }else printf("%lld/%lld\n",num,den);
 
         }else {
             printf("0\n");
         }
 
+
     }
 
     return 0;
 }
-
-
-
-
