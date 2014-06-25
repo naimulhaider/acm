@@ -1,0 +1,7 @@
+Log of interesting problems
+
+== 26 June, 2014 ==
+
+CF#222 Problem D ( Developing Games )
+Soln: Figure out that we can create rectanges on 2d plane with x axis running from L to V , y axis V to R. The point at which most of the rectanges intersect is the range of interest. Must satisfy condition L <= resL, V >= resL && V <= resR, resR <= R.
+For segment tree part, keep max value and index of max value for each node. Sort with L, and add on range 1 or -1. Determine the resultant range.
