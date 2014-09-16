@@ -13,6 +13,28 @@ the radius can be found by the formula r = 2 * a / p, where a is the area(heron)
 const double EPS = 1e-6;
 const double PI = acos(-1);
 
+/*** ALGEBRAIC METHODS ****/
+// the area of a triangle given three sides
+double heron( double sa, double sb, double sc ) {
+    double s = 0.5 * (sa + sb + sc);
+    double ret = s * (s-sa) * (s-sb) * (s-sc);
+    return sqrt( ret );
+}
+
+// sector area of circle given radius and angle
+double sectorArea( double r, double theta ) {
+    return (r * r * theta) / 2.0;
+}
+
+// returns the angle thetaA having known three sides
+double cosineAngle( double a, double b, double c ) {
+    return acos( (b*b + c * c - a*a) / (2 * b * c) );
+}
+
+/** Geometry Data Structures and Functions **/
+
+int signum(double x) { return x < -EPS? -1: x > EPS; }
+
 double my_round(double x) {
     return floor(x * 1000 + 0.5) / 1000;
 }
@@ -296,6 +318,22 @@ struct circle {
                 + norm(c.x-o.x, c.y-o.y) ) / 3.0;
     }
 
+    // two points & radius
+    circle(const point a, const point b, const double R) {
+        double d = dist( a,b );
+        double area = heron( d, R ,R );
+        double h = (2 * area) / d;
+        double mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        double vx = a.x - b.x , vy = a.y - b.y;
+        vx /= d, vy /= d;
+        vx *= h , vy *= h;
+        vx *= -1; // for left hand point
+        // cur vx *= -1 and do vy *= -1 for right hand point
+        o.x = ( mx + vy );
+        o.y = (my + vx);
+        r = R;
+    }
+
     bool contains(const point &p) const{
         return norm( p.x-o.x, p.y-o.y ) < r + EPS;
     }
@@ -347,113 +385,6 @@ int circlecircleIntersection( circle c1, circle c2 , vector<point>& pts ) {
     return 0;
 }
 
-// Circle - Circle Intersection ( only to be used with area union )
-point intersect(const circle &a, const circle &b){
-    point r = point (b.o.x - a.o.x, b.o.y-a.o.y);
-    double normalizer = norm ( r.x , r.y );
-    r.x /= normalizer , r.y /= normalizer;
-    double d = norm (b.o.x - a.o.x, b.o.y - a.o.y);
-    double x = 0.5 * ((a.r*a.r - b.r*b.r) / d + d);
-    double h = sqrt(a.r*a.r - x*x);
-    point ret = point( a.o.x , a.o.y );
-    ret.x += ( r.x * x );
-    ret.y += ( r.y * x );
-    ret.x += ( -r.y * h );
-    ret.y += ( r.x * h );
-    ret;
-}
-
-int signum(double x) { return x < -EPS? -1: x > EPS; }
-
-// AREA OF UNION OF CIRCLES
-double* count(circle circles[], int n) {
-    double* result = new double[n + 1];
-    memset(result, 0, sizeof(result));
-#define ADD(k, v) events.push_back(make_pair(k, v))
-#define ADD_PAIR(a, b) ADD(a, 1), ADD(b, -1)
-    for (int i = 0; i < n; ++ i) {
-        circle &a = circles[i];
-        vector <pair <double, int> > events;
-        ADD(-PI, 0), ADD(PI, 0);
-        for (int j = 0; j < n; ++ j) {
-            if (i != j) {
-                circle &b = circles[j];
-                if (a == b) {
-                    if (i < j) {
-                        ADD_PAIR(-PI, PI);
-                    }
-                } else {
-                    double d = norm( a.o.x - b.o.x , a.o.y - b.o.y );
-                    if (signum(a.r - b.r) < 0 && signum(d - (b.r - a.r)) <= 0) {
-                        ADD_PAIR(-PI, PI);
-                    } else if (signum(d - (a.r + b.r)) < 0) {
-                        point ints1 = intersect(b, a);
-                        point ints2 = intersect(a, b);
-                        double x = atan2( ints1.y, ints1.x );
-                        double y = atan2( ints2.y, ints2.x );
-                        if (signum(x - y) <= 0) {
-                            ADD_PAIR(x, y);
-                        } else {
-                            ADD_PAIR(x, PI);
-                            ADD_PAIR(-PI, y);
-                        }
-                    }
-                }
-            }
-        }
-        sort(events.begin(), events.end());
-        int counter = events.front().second;
-#define RADIUS(a, r) (point(cos(a)*r, sin(a)*r) )
-        for (int j = 1; j < (int)events.size(); ++ j) {
-            double delta = events[j].first - events[j - 1].first;
-            result[counter] += 0.5 * a.r * a.r * (delta - sin(delta));
-            point k1 = RADIUS(events[j - 1].first, a.r);
-            point k2 = RADIUS(events[j].first, a.r);
-            point p = point( a.o.x + k1.x , a.o.y + k1.y );
-            point q = point( a.o.x + k2.x , a.o.y + k2.y );
-            result[counter] += 0.5 * det(p, q);
-            counter += events[j].second;
-        }
-    }
-    return result;
-}
-
-// Tangent to the circle at point p
-point tangent(const point &p, const circle &c) {
-    circle a(p, c.o);
-    return intersect(a, c);
-}
-
-// Internal Similitude Center
-pair <point, point> tangent_int(const circle &a, const circle &b){
-    point p ( b.o.x-a.o.x , b.o.y-a.o.y );
-    p.x /= (a.r + b.r) * a.r;
-    p.y /= (a.r + b.r) * a.r;
-    p.x += a.o.x;
-    p.y += a.o.y;
-    return make_pair(tangent(p, a), tangent(p,b));
-}
-
-// External Similitude Center
-pair <point, point> tangent_ext(const circle &a, const circle &b){
-    if (signum(a.r - b.r) == 0){
-        point r( b.o.x - a.o.x , b.o.y - a.o.y );
-        double nrm = norm( r.x , r.y );
-        r.x /= nrm , r.y /= nrm;
-        r = point( -r.y , r.x );
-        r.x *= 0.5, r.y *= 0.5;
-        r.x *= ( a.r + b.r );
-        r.y *= ( a.r + b.r );
-        return make_pair( point( a.o.x + r.x, a.o.y + r.y ), point( b.o.x + r.x, b.o.y + r.y ) );
-    }
-    if (signum(a.r - b.r) > 0) return tangent_ext(b, a);
-    point p = tangent(a.o, circle(b.o, b.r - a.r));
-    point r ( p.x - b.o.x , p.y - b.o.y );
-    double nrm = norm( r.x , r.y );
-    r.x /= nrm, r.y /= nrm;
-    r.x *= a.r, r.y *= a.r;
-    return make_pair( point(a.o.x+r.x,a.o.y+r.y) , point(b.o.x+r.x,b.o.y+r.y) );
-}
 
 // The minimum circle that bounds all the points
 circle mincircle(point points[], int n){
@@ -485,16 +416,17 @@ double point_to(point &from , point &a, point &b) {
 }
 
 
-point project( point &from, point &a, point &b) {
+point project( point from, point a, point b) {
     point p = from;
     point k ( b.x - a.x, b.y - a.y );
     double nrm = norm_sq( a.x - b.x, a.y - b.y );
-    k.x *= nrm, k.y *= nrm;
     double dt = dot( point(p.x-a.x,p.y-a.y), point(b.x-a.x,b.y-a.y) );
-    k.x /= dt, k.y /= dt;
+    double dtbnrm = dt / nrm;
+    k.x *= dtbnrm;
+    k.y *= dtbnrm;
     return point( a.x + k.x , a.y + k.y );
 }
-// Circle - Line Intersection Point ( Required only for circle triangle intersection )
+
 point intersect_cir_line( circle &c, point &a, point &b) {
     double x = sqrt(c.r*c.r - point_to(c.o,a,b) * point_to(c.o,a,b) );
     double normalizer = norm ( a.x - b.x , a.y - b.y );
@@ -505,22 +437,52 @@ point intersect_cir_line( circle &c, point &a, point &b) {
 
 double angle(const point &a, const point &b) { return atan2(det(a, b), dot(a, b)); }
 
+
+bool onSegment(point& p, point& a, point& b){
+    point pa ( p.x-a.x, p.y-a.y );
+    point pb ( p.x - b.x , p.y - b.y );
+    return ( signum( det(pa,pb) ) == 0 && signum( dot(pa,pb) ) <= 0 );
+}
+
 // CIRCLE - TRIANGLE INTERSECTION
 double intersect(circle c, point a, point b){
+    if ( a == c.o || b == c.o ) {
+        return 0.0;
+    }
+    if( signum( det(a,b) ) == 0 ) {
+        return 0.0;
+    }
+
     a.x -= c.o.x, a.y -= c.o.y;
     b.x -= c.o.x , b.y -= c.o.y;
     c.o = point();
     if (c.contains(b)) swap(a, b);
-    if (c.contains(a) && c.contains(b)) return 0.5 * fabs(det(a, b));
+    if (c.contains(a) && c.contains(b)) {
+        return 0.5 * fabs(det(a, b)); // 1. the area of the triangle
+    }
     if (c.contains(a)) {
         point p = intersect_cir_line(c, b, a);
-        return 0.5 * ( fabs(det(a, p)) + fabs( c.r*c.r * angle(p, b) ) );
-    } if ( point_to(c.o,a, b) >= c.r - EPS){
-        return 0.5 * fabs(c.r*c.r * angle(a, b));
+        return 0.5 * ( fabs(det(a, p)) + fabs( c.r*c.r * angle(p, b) ) ); // 2. one point inside
     }
+    if ( point_to(c.o,a, b) >= c.r - EPS){
+        return 0.5 * fabs(c.r*c.r * angle(a, b)); // 3. Both outside and line doesnt intersect
+    }
+    // 4. Both Outside & Line Intersects circle at 2 points
     point p = intersect_cir_line(c, a, b);
     point q = intersect_cir_line(c, b, a);
-    return 0.5 * (fabs(det(a, p)) + fabs(c.r*c.r * angle(p, q)) + fabs(det(q, b)));
+
+    point prj = project( point(0,0) , a, b );
+
+    double totSector = fabs( c.r * c.r * angle(a,b) ) / 2;
+    double triangle = fabs( det(p,q) ) / 2;
+    double smallSector = fabs( c.r * c.r * angle(p,q) ) / 2;
+
+    if( onSegment( prj , a, b ) ) {
+        return totSector - ( smallSector - triangle ) ;
+    }
+
+    return totSector ;
+
 }
 
 //Triangle Centroid
@@ -582,23 +544,6 @@ double dot(point3d a, point3d b){
     return a.x*b.x + a.y*b.y + a.z*b.z;
 }
 
-/*** ALGEBRAIC METHODS ****/
-// the area of a triangle given three sides
-double heron( double sa, double sb, double sc ) {
-    double s = 0.5 * (sa + sb + sc);
-    double ret = s * (s-sa) * (s-sb) * (s-sc);
-    return sqrt( ret );
-}
-
-// sector area of circle given radius and angle
-double sectorArea( double r, double theta ) {
-    return (r * r * theta) / 2.0;
-}
-
-// returns the angle thetaA having known three sides
-double cosineAngle( double a, double b, double c ) {
-    return acos( (b*b + c * c - a*a) / (2 * b * c) );
-}
 
 /** Computational Geometry **/
 typedef long long LL;
@@ -662,7 +607,8 @@ struct vec3 {
 
 /* Original points in the input. */
 vec3 A[MAXN];
-/* E[i][j] indicates which (up to two) other points combine with the edge i and j to make a face in the hull.  Only defined when i < j. */
+/* E[i][j] indicates which (up to two) other points combine with the edge i and j
+to make a face in the hull.  Only defined when i < j. */
 struct twoset {
   void insert(int x) { (a == -1 ? a : b) = x; }
   bool contains(int x) { return a == x || b == x; }
@@ -1004,6 +950,82 @@ double union_perimeter(vector<rect>& R) {
     return r;
 }
 
+/** Area of Union of Circles **/
+/**
+struct Point
+{
+    double x,y;
+    Point(double a=0.0,double b=0.0){x=a;y=b;}
+    Point operator+(const Point&a)const{return Point(x+a.x,y+a.y);}
+    Point operator-(const Point&a)const{return Point(x-a.x,y-a.y);}
+    Point operator*(const double&a)const{return Point(x*a,y*a);}
+    Point operator/(const double&a)const{return Point(x/a,y/a);}
+    double operator*(const Point&a)const{return x*a.y-y*a.x;}
+    double operator/(const Point&a)const{return sqrt((a.x-x)*(a.x-x)+(a.y-y)*(a.y-y));}
+    double operator%(const Point&a)const{return x*a.x+y*a.y;}
+}po[1005];
+
+double r[1005];
+const double eps = 1e-7;
+const double pi=acos(-1.0);
+inline int sgn(double x)
+{return fabs(x)<eps?0:(x>0.0?1:-1);}
+
+pair<double,bool>arg[2005];
+double cir_union(Point c[],double r[],int n)
+{
+    double sum=0.0,sum1=0.0,d,p1,p2,p3;
+    for(int i=0;i<n;i++)
+    {
+        bool f=1;
+        for(int j=0;f&&j<n;j++)
+            if(i!=j&&sgn(r[j]-r[i]-c[i]/c[j])!=-1)f=0;
+        if(!f)swap(r[i],r[--n]),swap(c[i--],c[n]);
+    }
+    for(int i=0;i<n;i++)
+    {
+        int k=0,cnt=0;
+        for(int j=0;j<n;j++)
+            if(i!=j&&sgn((d=c[i]/c[j])-r[i]-r[j])<=0)
+            {
+                p3=acos((r[i]*r[i]+d*d-r[j]*r[j])/(2.0*r[i]*d));
+                p2=atan2(c[j].y-c[i].y,c[j].x-c[i].x);
+                p1=p2-p3;p2=p2+p3;
+                if(sgn(p1+pi)==-1)p1+=2*pi,cnt++;
+                if(sgn(p2-pi)==1)p2-=2*pi,cnt++;
+                arg[k++]=make_pair(p1,0);arg[k++]=make_pair(p2,1);
+            }
+        if(k)
+        {
+            sort(arg,arg+k);
+            p1=arg[k-1].first-2*pi;
+            p3=r[i]*r[i];
+            for(int j=0;j<k;j++)
+            {
+                p2=arg[j].first;
+                if(cnt==0)
+                {
+                    sum+=(p2-p1-sin(p2-p1))*p3;
+                    sum1+=(c[i]+Point(cos(p1),sin(p1))*r[i])*(c[i]+Point(cos(p2),sin(p2))*r[i]);
+                }
+                p1=p2;
+                arg[j].second?cnt--:cnt++;
+            }
+        }
+        else sum+=2*pi*r[i]*r[i];
+    }
+    return (sum+fabs(sum1))*0.5;
+}
+
+int main() {
+//    freopen( "input.txt", "r", stdin );
+    int n;scanf("%d",&n);
+    for(int i=0;i<n;i++)
+        scanf("%lf%lf%lf",&po[i].x,&po[i].y,r+i);
+    printf("%.3f\n",cir_union(po,r,n));
+    return 0;
+}
+**/
 
 int main() {
 
